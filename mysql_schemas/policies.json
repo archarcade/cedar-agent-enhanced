@@ -1,0 +1,6 @@
+[
+    {
+      "id": "mysql_column_access_default_accept",
+      "content": "permit (principal, action, resource)\nwhen { resource is MySQL::Column };"
+    }
+]

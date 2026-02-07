@@ -1,7 +1,5 @@
 pub mod data;
+pub mod invalidation;
 pub mod policies;
 pub mod schema;
-
-pub use data::DataStore;
-pub use policies::PolicyStore;
-pub use schema::SchemaStore;
+pub mod stats;

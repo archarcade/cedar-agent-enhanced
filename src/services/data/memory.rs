@@ -95,10 +95,48 @@ impl DataStore for MemoryDataStore {
             }
         };
         let schema_entities: schemas::Entities = core_entities.clone().into();
-        let cedar_entities: cedar_policy::Entities = match schema_entities.borrow().convert_to_cedar_entities(&schema) {
+        let cedar_entities: cedar_policy::Entities =
+            match schema_entities.borrow().convert_to_cedar_entities(&schema) {
+                Ok(entities) => entities,
+                Err(err) => return Err(err.into()),
+            };
+        *lock = Entities::new(cedar_entities, core_entities);
+        Ok(schema_entities)
+    }
+
+    async fn add_entities(
+        &self,
+        new_entities: schemas::Entities,
+        schema: Option<Schema>,
+    ) -> Result<schemas::Entities, Box<dyn Error>> {
+        info!("Adding entities to store atomically");
+        let mut lock = self.write().await;
+        
+        // 1. Get current entities
+        let existing_core = lock.1.clone();
+        let mut existing_schemas: schemas::Entities = existing_core.into();
+        
+        // 2. Merge with new entities
+        existing_schemas.extend(new_entities.into_iter());
+        
+        // 3. Re-parse everything
+        let core_entities: entities::Entities = match existing_schemas.try_into() {
             Ok(entities) => entities,
-            Err(err) => return Err(err.into()),
+            Err(err) => {
+                return {
+                    error!("Failed to parse merged entities");
+                    Err(err.into())
+                }
+            }
         };
+        let schema_entities: schemas::Entities = core_entities.clone().into();
+        let cedar_entities: cedar_policy::Entities =
+            match schema_entities.borrow().convert_to_cedar_entities(&schema) {
+                Ok(entities) => entities,
+                Err(err) => return Err(err.into()),
+            };
+            
+        // 4. Save
         *lock = Entities::new(cedar_entities, core_entities);
         Ok(schema_entities)
     }

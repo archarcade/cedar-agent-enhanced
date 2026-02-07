@@ -1,10 +1,9 @@
-use std::str::FromStr;
-
 use async_lock::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use async_trait::async_trait;
 use cedar_policy::Schema as CedarSchema;
 use cedar_policy::SchemaError;
 use log::{debug, error, info};
+use rocket::serde::json::serde_json;
 
 use crate::schemas::schema::Schema as InternalSchema;
 use crate::services::schema::SchemaStore;
@@ -13,9 +12,15 @@ pub struct Schema(CedarSchema, InternalSchema);
 
 impl Schema {
     fn empty() -> Self {
+        let empty_json = serde_json::json!({
+            "": {
+                "entityTypes": {},
+                "actions": {}
+            }
+        });
         Self {
-            0: CedarSchema::from_str("{}").unwrap(),
-            1: InternalSchema::empty()
+            0: CedarSchema::from_json_value(empty_json).unwrap(),
+            1: InternalSchema::empty(),
         }
     }
 
@@ -30,19 +35,19 @@ impl Schema {
     fn new(cedar_schema: CedarSchema, internal_schema: InternalSchema) -> Self {
         Self {
             0: cedar_schema,
-            1: internal_schema
+            1: internal_schema,
         }
     }
 }
 
 pub struct MemorySchemaStore {
-    schema: RwLock<Schema>
+    schema: RwLock<Schema>,
 }
 
 impl MemorySchemaStore {
     pub fn new() -> Self {
         Self {
-            schema: RwLock::new(Schema::empty())
+            schema: RwLock::new(Schema::empty()),
         }
     }
 
@@ -74,10 +79,7 @@ impl SchemaStore for MemorySchemaStore {
         lock.internal_schema()
     }
 
-    async fn update_schema(
-        &self,
-        schema: InternalSchema
-    ) -> Result<InternalSchema, SchemaError> {
+    async fn update_schema(&self, schema: InternalSchema) -> Result<InternalSchema, SchemaError> {
         info!("Updating stored schema");
         let mut lock = self.write().await;
         let internal_schema: InternalSchema = schema.clone();

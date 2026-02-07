@@ -62,6 +62,57 @@ Cedar-Agent offers a comprehensive solution for managing policies, data, and aut
 application. With its seamless integration with Cedar and its robust HTTP server capabilities, Cedar-Agent empowers you
 to enforce fine-grained access control and protect your resources effectively.
 
+## Admin Dashboard
+
+Cedar-Agent now includes a beautiful, modern web-based admin dashboard built with Next.js and shadcn/ui components. The dashboard provides an intuitive interface for managing all aspects of your Cedar policies, entities, and schemas.
+
+### Features
+
+- 🛡️ **Policy Management**: Create, read, update, and delete Cedar authorization policies with a visual form interface
+- 💾 **Entity Management**: Manage entities with attributes and hierarchical relationships
+- 📋 **Schema Management**: Define and visualize entity types and actions with both visual and JSON editors
+- ✅ **Authorization Testing**: Test authorization decisions in real-time with detailed diagnostics
+- 🎨 **Modern UI**: Responsive design with dark mode support
+- 📊 **Dashboard Overview**: Monitor service health and view statistics at a glance
+
+### Quick Start
+
+The easiest way to start both the backend and frontend together:
+
+```shell
+./start_full_stack.sh
+```
+
+This will start:
+- Cedar Agent API at `http://localhost:8180`
+- Admin Dashboard at `http://localhost:3000`
+
+Or start them separately:
+
+**Backend:**
+```shell
+./start_cedar_agent.sh
+```
+
+**Frontend:**
+```shell
+cd frontend
+npm install
+npm run dev
+```
+
+For detailed setup instructions, see [FRONTEND_SETUP.md](FRONTEND_SETUP.md).
+
+### Screenshots
+
+The dashboard includes:
+- **Dashboard**: Overview with service status and statistics
+- **Policies**: Visual policy editor with support for principals, actions, resources, and conditions
+- **Entities**: Entity browser with attribute and parent management
+- **Schema**: Interactive schema viewer and JSON editor
+- **Authorization**: Real-time authorization testing tool
+- **Settings**: API configuration interface
+
 ## How to Use
 
 To use Cedar-Agent, follow the steps below:
@@ -151,11 +202,29 @@ To check the arguments you can pass to the binary, run:
 
 #### Run with docker
 
+**Quick Start with Docker Compose (Recommended)**
+
+The easiest way to run the full stack (backend + frontend):
+
+```shell
+docker-compose up --build
+```
+
+This will start:
+- Backend API at `http://localhost:8180`
+- Frontend Dashboard at `http://localhost:3000`
+
+**Backend Only**
+
 To execute the Cedar Agent docker image, use the following command:
 
 ```shell
-docker run -p 8180:8180 permitio/cedar-agent
+docker run -p 8180:8180 ghcr.io/archarcade/cedar-agent
 ```
+
+**Full Docker Setup**
+
+For complete Docker setup including multi-architecture builds, CI/CD workflows, and production deployment, see [DOCKER.md](DOCKER.md).
 
 ### Test
 

@@ -1,6 +1,6 @@
 use cedar_policy::Authorizer;
 
-use log::info;
+use log::{debug, info, warn};
 
 use rocket::serde::json::Json;
 use rocket::{post, State};
@@ -9,7 +9,9 @@ use rocket_okapi::openapi;
 use crate::authn::ApiKey;
 use crate::errors::response::AgentError;
 use crate::schemas::authorization::{AuthorizationAnswer, AuthorizationCall, AuthorizationRequest};
-use crate::{DataStore, PolicyStore};
+use crate::services::data::DataStore;
+use crate::services::policies::PolicyStore;
+use crate::services::stats::StatsStore;
 
 #[openapi]
 #[post("/is_authorized", format = "json", data = "<authorization_call>")]
@@ -17,16 +19,24 @@ pub async fn is_authorized(
     _auth: ApiKey,
     policy_store: &State<Box<dyn PolicyStore>>,
     data_store: &State<Box<dyn DataStore>>,
+    stats_store: &State<Box<dyn StatsStore>>,
     authorizer: &State<Authorizer>,
     authorization_call: Json<AuthorizationCall>,
 ) -> Result<Json<AuthorizationAnswer>, AgentError> {
+    // Increment total authorization request counter
+    stats_store.increment_auth_request().await;
+    
+    // Print the payload to the console
+    debug!("Received authorization request: {:?}", authorization_call);
+
     let policies = policy_store.policy_set().await;
     let query: AuthorizationRequest = match authorization_call.into_inner().try_into() {
         Ok(query) => query,
         Err(err) => {
+            warn!("Invalid authorization request: {}", err);
             return Err(AgentError::BadRequest {
                 reason: err.to_string(),
-            })
+            });
         }
     };
 
@@ -35,14 +45,27 @@ pub async fn is_authorized(
     let stored_entities = data_store.entities().await;
     let (request, entities) = match query.get_request_entities(stored_entities) {
         Ok(result) => result,
-        Err(err)=> {
+        Err(err) => {
+            warn!("Failed to build request/entities: {}", err);
             return Err(AgentError::BadRequest {
                 reason: err.to_string(),
-            })
+            });
         }
     };
 
     info!("Querying cedar using {:?}", &request);
     let answer = authorizer.is_authorized(&request, &policies, &entities);
+    debug!("Authorization answer: {:?}", answer);
+    
+    // Track allow/deny decision
+    match answer.decision() {
+        cedar_policy::Decision::Allow => {
+            stats_store.increment_allow().await;
+        }
+        cedar_policy::Decision::Deny => {
+            stats_store.increment_deny().await;
+        }
+    }
+    
     Ok(Json::from(AuthorizationAnswer::from(answer)))
 }

@@ -5,8 +5,8 @@ use cedar_policy::Schema;
 
 use crate::schemas::data as schemas;
 
-pub mod memory;
 pub mod load_from_file;
+pub mod memory;
 
 #[async_trait]
 pub trait DataStore: Send + Sync {
@@ -16,6 +16,11 @@ pub trait DataStore: Send + Sync {
     async fn update_entities(
         &self,
         entities: schemas::Entities,
+        schema: Option<Schema>,
+    ) -> Result<schemas::Entities, Box<dyn Error>>;
+    async fn add_entities(
+        &self,
+        new_entities: schemas::Entities,
         schema: Option<Schema>,
     ) -> Result<schemas::Entities, Box<dyn Error>>;
 }
